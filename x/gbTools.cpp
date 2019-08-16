@@ -1,9 +1,15 @@
-void gb_waitForUpdate()
+
+#ifndef GAMEBUINO_TOOLS
+#define GAMEBUINO_TOOLS
+
+#include <Gamebuino.h>
+
+void waitForUpdate(Gamebuino &gb)
 {
   while (!gb.update()) {}
 }
 
-void pause() {
+void pause(Gamebuino &gb) {
     gb.display.persistence = true;
     while(true) 
     { 
@@ -15,3 +21,4 @@ void pause() {
       }
     }
 }
+#endif /* GAMEBUINO_TOOLS */
