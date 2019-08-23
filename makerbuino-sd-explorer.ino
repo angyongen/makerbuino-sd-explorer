@@ -8,11 +8,6 @@ Gamebuino gb;
 #include <SdFat.h>///#include "Gamebuino-SD-Explorer.h"
 SdFat sd;
 
-#define explorer_state 0
-#define file_actions_state 1
-#define LFN_viewer_state 2
-uint8_t state;
-
 #define screen gb.display
 #define debug Serial
 void setup() {
@@ -32,18 +27,14 @@ void setup() {
     debug.println(F("SD ok"));
   }
   waitForUpdate(gb);
-  state = 0;
+  explorer_loop();
 }
 
 
 void loop() {
-  switch (state)
+  if (gb.update())
   {
-    case explorer_state:
-      state = explorer_loop(state);
-      break;
-    case LFN_viewer_state:
-      state = LFN_viewer_loop(state);
-      break;
+    gb.display.clear();
+    gb.display.print(F("Please reset the device"));
   }
 }
