@@ -1,10 +1,10 @@
 typedef int8_t displayedFiles_t; // file # on screen
 
-const displayedFiles_t displayedFiles = 6;
+const displayedFiles_t displayedFiles = 7;
 
 bool explorer_option_showBlankEntries = false;
 
-inline void explorer_redraw(FatFile & dir, uint32_t & startPosition)
+inline bool explorer_redraw(FatFile & dir, uint32_t & startPosition)
 {
   gb.display.clear();
   dir_t entry;
@@ -20,9 +20,20 @@ inline void explorer_redraw(FatFile & dir, uint32_t & startPosition)
       switch (checkDirEntry(entry)) {
         case 0: //last entry
           //Serial.print(0); Serial.println(entry.name[0], HEX);
-          return;
+          return (f > 1); // stop when f == 1
         case 1: //invalid or deleted
-          if (explorer_option_showBlankEntries) gb.display.println();
+          if (explorer_option_showBlankEntries) {
+            ++f;
+            if (entry.name[0] == DIR_NAME_DELETED) {
+              gb.display.print(F(" "));
+              for (uint8_t i = 1; i < 11; i++) gb.display.print((char)entry.name[i]);
+              gb.display.println(F(" [X]"));
+            } else {
+              gb.display.println(F(" "));
+            }
+          } else {
+            if (f == 0)  startPosition += 32;
+          }
           //Serial.print(1); Serial.println(entry.name[0], HEX);
           break;
         case 2:
@@ -34,22 +45,73 @@ inline void explorer_redraw(FatFile & dir, uint32_t & startPosition)
           break;
       }
     } else {
-      return;
+      return false;
     }
+  }
+  return true;
+}
+
+inline void explorer_gotoPreviousFile(FatFile & dir, uint32_t & startPosition)
+{
+  if (startPosition == 0) return;
+  dir_t entry;
+  uint32_t newStartPosition = startPosition - 32;
+  dir.seekSet(newStartPosition);
+  while (readNextDirRaw(dir, entry))
+  {
+    switch (checkDirEntry(entry)) {
+      case 0:
+        return;
+      case 1:
+        if (explorer_option_showBlankEntries) {
+          startPosition = newStartPosition;
+          return;
+        } else {
+          if (newStartPosition == 0) return;
+          newStartPosition -= 32;
+          dir.seekSet(newStartPosition);
+          break;
+        }
+      case 2:
+        startPosition = newStartPosition;
+        return;
+    }
+    dir.seekSet(newStartPosition);
   }
 }
 
+inline void explorer_gotoNextFile(FatFile & dir, uint32_t & startPosition)
+{
+  startPosition += 32;
+  /*
+    dir_t entry;
+    dir.seekSet(startPosition);
+    while (readNextDirRaw(dir, entry))
+    {
+    switch (checkDirEntry(entry)) {
+      case 0:
+        startPosition -= 32;
+        return;
+      case 1:
+        if (!explorer_option_showBlankEntries) startPosition += 32;
+        break;
+      case 2:
+        return;
+    }
+    }
+  */
+}
 uint8_t explorer_loop()
 {
   FatFile dir;
   uint32_t startPosition; // position in dir file of first displayed file
   uint16_t file_index;
-
+  bool endNotReached = false;
   if (dir.open("/")) {
     displayedFiles_t fileNo = 0;
-    dir.rewind();
-    startPosition = dir.curPosition();
-    explorer_redraw(dir, startPosition);
+    //dir.rewind();
+    startPosition = 0;
+    endNotReached = explorer_redraw(dir, startPosition);
     while (true) {
       if (gb.update()) {
         if (gb.buttons.pressed(BTN_A))
@@ -66,20 +128,19 @@ uint8_t explorer_loop()
             dir.open("/");
             dir.rewind();
           }
-          explorer_redraw(dir, startPosition);
+          endNotReached = explorer_redraw(dir, startPosition);
         }
         if (gb.buttons.repeat(BTN_UP, repeatTime))
         {
-          if (startPosition != 0)
-          {
-            startPosition -= 32;
-            explorer_redraw(dir, startPosition);
-          }
+          explorer_gotoPreviousFile(dir, startPosition);
+          endNotReached = explorer_redraw(dir, startPosition);
         }
         if (gb.buttons.repeat(BTN_DOWN, repeatTime))
         {
-          startPosition += 32;
-          explorer_redraw(dir, startPosition);
+          if (endNotReached) {
+            explorer_gotoNextFile(dir, startPosition);
+          }
+          endNotReached = explorer_redraw(dir, startPosition);
         }
         if (gb.buttons.pressed(BTN_B))
         {
@@ -88,7 +149,7 @@ uint8_t explorer_loop()
         if (gb.buttons.pressed(BTN_C))
         {
           explorer_option_showBlankEntries = !explorer_option_showBlankEntries;
-          explorer_redraw(dir, startPosition);
+          endNotReached = explorer_redraw(dir, startPosition);
         }
       }
     }
