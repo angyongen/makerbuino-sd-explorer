@@ -29,7 +29,7 @@ inline bool explorer_redraw(FatFile & dir, uint32_t & startPosition)
               for (uint8_t i = 1; i < 11; i++) gb.display.print((char)entry.name[i]);
               gb.display.println(F(" [X]"));
             } else {
-              gb.display.println(F(" "));
+              gb.display.println();
             }
           } else {
             if (f == 0)  startPosition += 32;
