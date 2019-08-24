@@ -1,157 +1,43 @@
+const uint8_t file_actions_count = 4;
 
-
-#define file_actions_count 3
-
-inline void file_action_0_printText(FatFile & dir, dir_t & entry)
+uint8_t map_selectedOption_realOption(uint8_t available_file_actions, uint8_t option)
 {
-  if (DIR_IS_SUBDIR(&entry)) {
-    gb.display.print(F("Open "));
-  } else {
-    gb.display.print(F("Flash "));
-  }
-  gb.display.print((char*)entry.name);
-}
-
-inline void file_action_0(FatFile & dir, dir_t & entry, uint32_t & fileposition)
-{
-  if (DIR_IS_SUBDIR(&entry)) {
-    if (!dir.open(&dir, fileposition / 32, O_READ)) {
-      Serial.println(F("open fail"));
-    }
-    dir.seekSet(0);
-    fileposition = dir.curPosition();
-    return;
-  } else {
-    load_game_menu(dir, (char*)entry.name);
-  }
-}
-
-inline void file_action_1_printText(FatFile & dir, dir_t & entry)
-{
-  gb.display.print(F("Properties"));
-}
-inline void file_action_1(FatFile & dir, dir_t & entry, uint32_t & fileposition)
-{
-  gb.display.clear();
-
-  gb.display.print(F("attributes: "));
-  //bitmask: 1=read only, 2=hidden, 4=system, 8=volumelabel, 16=dir, 32=archive
-  uint8_t attr = entry.attributes;
-  gb.display.print((attr & 0x80) ? F("x") : F("-")); attr <<= 1;
-  gb.display.print((attr & 0x80) ? F("x") : F("-")); attr <<= 1;
-  gb.display.print((attr & 0x80) ? F("A") : F("-")); attr <<= 1;
-  gb.display.print((attr & 0x80) ? F("D") : F("-")); attr <<= 1;
-  gb.display.print((attr & 0x80) ? F("V") : F("-")); attr <<= 1;
-  gb.display.print((attr & 0x80) ? F("S") : F("-")); attr <<= 1;
-  gb.display.print((attr & 0x80) ? F("H") : F("-")); attr <<= 1;
-  gb.display.print((attr & 0x80) ? F("R") : F("-")); attr <<= 1;
-
-
-  while (true) {
-    if (gb.update()) {
-      if (gb.buttons.pressed(BTN_B)) return;
-    }
-  }
-}
-
-inline void file_action_2_printText(FatFile & dir, dir_t & entry)
-{
-  gb.display.print(F("Get LFN"));
-}
-
-inline bool redrawLFNPage(FatFile & dir, uint32_t filePosition, uint8_t indexStart, uint8_t indexEnd)
-{ //true for next page available, false for unavailable
-  dir_t lfnEntry;
-  for (uint8_t index = indexStart; index < indexEnd; ++index) // 7 lines x 13
+  uint8_t o = option;
+  for (uint8_t t = 0; t < file_actions_count; ++t)
   {
-    filePosition -= 32;
-    dir.seekSet(filePosition);
-    if (readNextDirRaw(dir, lfnEntry))
-    {
-      ldir_t & ldir = reinterpret_cast<ldir_t&>(lfnEntry);
-      //if (!ldir) {DBG_FAIL_MACRO;goto fail;}
-      if (index != (ldir.ord & 0X1F)) {
-        DBG_FAIL_MACRO;
-        return false;
-      }
-      if (ldir.attr != DIR_ATT_LONG_NAME) return false;
-      if (index < 10) gb.display.print(F(" "));
-      gb.display.print(index); gb.display.print(F(" "));
-      for (uint8_t i = 0; i < 5; ++i) printLFNChar(ldir.name1[i]);
-      for (uint8_t i = 0; i < 6; ++i) printLFNChar(ldir.name2[i]);
-      for (uint8_t i = 0; i < 2; ++i) printLFNChar(ldir.name3[i]);
-      if (ldir.ord & LDIR_ORD_LAST_LONG_ENTRY) return false;
-      gb.display.println();
-    }
+    if ((available_file_actions & (1 << t)) == 0) continue;
+    if (o-- == 0) return t;
   }
-  return true;
-}
-inline void LFNViewer_draw_pageNo(uint8_t & page, uint8_t & pages)
-{
-  gb.display.cursorX = 0;
-  gb.display.cursorY = 0;
-  if (page == 1) {
-    gb.display.print(F(" "));
-  } else {
-    gb.display.print(F("\21"));
-  }
-  gb.display.print(F(" Page "));
-  gb.display.print(page);
-  gb.display.print(F(" of "));
-  if (pages == 0) {
-    gb.display.print(F("? \20"));
-  } else {
-    gb.display.print(pages);
-  }
-  if (page < pages) gb.display.print(F(" \20"));
-}
-inline void file_action_2(FatFile & dir, dir_t & entry, uint32_t & filePosition)
-{
-  uint8_t indexStart = 1;
-  uint8_t page = 1;
-  uint8_t pages = 0;
-
-  gb.display.clear();
-  gb.display.println();
-  if (!redrawLFNPage(dir, filePosition, indexStart, indexStart + 7)) pages = page;
-  LFNViewer_draw_pageNo(page, pages);
-  while (true)
-  {
-    if (gb.update())
-    {
-      if (gb.buttons.pressed(BTN_B)) return;
-      if (gb.buttons.pressed(BTN_LEFT)) {
-        if (page != 1) --page;
-        gb.display.clear();
-        gb.display.println();
-        if (!redrawLFNPage(dir, filePosition, indexStart, indexStart + 7)) pages = page;
-        LFNViewer_draw_pageNo(page, pages);
-      }
-      if (gb.buttons.pressed(BTN_RIGHT)) {
-        if (page != pages) ++page;
-        gb.display.clear();
-        gb.display.println();
-        if (!redrawLFNPage(dir, filePosition, indexStart, indexStart + 7)) pages = page;
-        LFNViewer_draw_pageNo(page, pages);
-      }
-    }
-  }
+  return file_actions_count;
 }
 
-void file_actions_loop(FatFile & dir, dir_t & entry, uint32_t & fileposition)
+void file_actions_loop(FatFile & dir, dir_t & entry, uint32_t & filePosition)
 {
   int8_t currentY = LCDHEIGHT / 2;
   int8_t targetY = 0;
   int8_t option = 0;
-  entry.name[8] = 0; //end string before extension; only 9 bytes copied during load_game subroutine.
+  uint8_t realOption = 0;
+  uint8_t available_file_actions = 0; // 1 bit for each action
+
+  if (!file_action_1_available(dir, entry, filePosition)) available_file_actions |= 1 << 0;
+  if (!file_action_2_available(dir, entry, filePosition)) available_file_actions |= 1 << 1;
+  if (!file_action_3_available(dir, entry, filePosition)) available_file_actions |= 1 << 2;
+  if (!file_action_4_available(dir, entry, filePosition)) available_file_actions |= 1 << 3;
+  available_file_actions = ~available_file_actions;
+  realOption = map_selectedOption_realOption(available_file_actions, option);
+
+  if (available_file_actions == 0) return; //no available actions
+
+  entry.name[8] = 0; //end string before extension
+  // also to prepare for the flash file action: only 9 bytes copied during load_game subroutine.
   while (true) {
     if (gb.update()) {
       if (gb.buttons.pressed(BTN_B)) return;
-      if (gb.buttons.pressed(BTN_UP)) --option;
+      if (gb.buttons.pressed(BTN_UP)) if (option > 0) --option;
       if (gb.buttons.pressed(BTN_DOWN)) ++option;
-
-      if (option < 0) option = 0;
-      if (option >= file_actions_count) option = file_actions_count - 1;
+      realOption = map_selectedOption_realOption(available_file_actions, option);
+      if (realOption >= file_actions_count) --option;
+      realOption = map_selectedOption_realOption(available_file_actions, option);
 
       targetY = (gb.display.fontHeight + 4) - gb.display.fontHeight * option; //center the menu on the active item
       currentY = (currentY + targetY) / 2; // slowly approach targetY by taking average
@@ -162,34 +48,33 @@ void file_actions_loop(FatFile & dir, dir_t & entry, uint32_t & fileposition)
       gb.display.cursorY = currentY;
       gb.display.fontSize = 1;
       gb.display.textWrap = false;
-      for (byte i = 0; i < file_actions_count; i++) {
+      for (uint8_t i = 0; i < file_actions_count; i++) {
+        if (!(available_file_actions & (1 << i))) continue;
         if (gb.display.cursorY < -gb.display.fontHeight) {
           gb.display.cursorY += gb.display.fontHeight;
           continue;
         }
-        if (i == option) {
+        if (i == realOption) {
           gb.display.cursorX = 3;
           gb.display.cursorY = currentY + option * gb.display.fontHeight;
         }
         switch (i)
         {
           case 0:
-            file_action_0_printText(dir, entry);
+            file_action_1_printText(dir, entry, filePosition);
             gb.display.println();
             break;
           case 1:
-            file_action_1_printText(dir, entry);
+            file_action_2_printText(dir, entry, filePosition);
             gb.display.println();
             break;
           case 2:
-            file_action_2_printText(dir, entry);
+            file_action_3_printText(dir, entry, filePosition);
             gb.display.println();
             break;
           case 3:
-            gb.display.println(F("Edit"));
-            break;
-          case 4:
-            gb.display.println(F("Open with..."));
+            file_action_4_printText(dir, entry, filePosition);
+            gb.display.println();
             break;
         }
       }
@@ -200,16 +85,19 @@ void file_actions_loop(FatFile & dir, dir_t & entry, uint32_t & fileposition)
 
       if (gb.buttons.pressed(BTN_A))
       {
-        switch (option)
+        switch (realOption)
         {
           case 0:
-            file_action_0(dir, entry, fileposition);
+            file_action_1(dir, entry, filePosition);
             return;
           case 1:
-            file_action_1(dir, entry, fileposition);
+            file_action_2(dir, entry, filePosition);
             break;
           case 2:
-            file_action_2(dir, entry, fileposition);
+            file_action_3(dir, entry, filePosition);
+            break;
+          case 3:
+            file_action_4(dir, entry, filePosition);
             break;
         }
       }

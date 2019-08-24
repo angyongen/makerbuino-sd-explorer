@@ -2,8 +2,7 @@ typedef int8_t displayedFiles_t; // file # on screen
 
 const displayedFiles_t displayedFiles = 6;
 
-//bool explorer_option_showBlankEntries = true;
-const bool explorer_option_showBlankEntries = true;
+bool explorer_option_showBlankEntries = false;
 
 inline void explorer_redraw(FatFile & dir, uint32_t & startPosition)
 {
@@ -11,7 +10,7 @@ inline void explorer_redraw(FatFile & dir, uint32_t & startPosition)
   dir_t entry;
   dir.seekSet(startPosition);
   gb.display.print(F("position: "));
-  gb.display.println(startPosition);
+  gb.display.println(startPosition / 32);
   //Serial.println();
   displayedFiles_t f = 0;
   while (f < displayedFiles)
@@ -30,6 +29,7 @@ inline void explorer_redraw(FatFile & dir, uint32_t & startPosition)
           //Serial.print(2); Serial.println(entry.name[0], HEX);
           ++f;
           for (uint8_t i = 0; i < 11; i++) gb.display.print((char)entry.name[i]);
+          if (DIR_IS_SUBDIR(&entry) )gb.display.print(F(" <DIR>"));
           gb.display.println();
           break;
       }
@@ -87,6 +87,8 @@ uint8_t explorer_loop()
         }
         if (gb.buttons.pressed(BTN_C))
         {
+          explorer_option_showBlankEntries = !explorer_option_showBlankEntries;
+          explorer_redraw(dir, startPosition);
         }
       }
     }
