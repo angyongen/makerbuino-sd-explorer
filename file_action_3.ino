@@ -1,3 +1,10 @@
+
+#ifdef DISPLAYDIRECT
+const uint8_t displayedEntries = 5;
+#else
+const uint8_t displayedEntries = 7;
+#endif
+
 inline bool file_action_3_available(FatFile & dir, dir_t & entry, uint32_t & filePosition)
 {
     // Check for LFN.
@@ -14,7 +21,7 @@ inline bool redrawLFNPage(FatFile & dir, uint32_t filePosition, uint8_t indexSta
 { //true for next page available, false for unavailable
   dir_t lfnEntry;
   filePosition -= (indexStart - 1) * 32;
-  for (uint8_t index = indexStart; index < indexEnd; ++index) // 7 lines x 13
+  for (uint8_t index = indexStart; index < indexEnd; ++index)
   {
     filePosition -= 32;
     dir.seekSet(filePosition);
@@ -64,7 +71,7 @@ inline void file_action_3(FatFile & dir, dir_t & entry, uint32_t & filePosition)
 
   gb.display.clear();
   gb.display.println();
-  if (!redrawLFNPage(dir, filePosition, page * 7 - 6, page * 7 + 1)) pages = page;
+  if (!redrawLFNPage(dir, filePosition, page * displayedEntries - displayedEntries + 1, page * displayedEntries + 1)) pages = page;
   LFNViewer_draw_pageNo(page, pages);
   while (true)
   {
@@ -75,14 +82,14 @@ inline void file_action_3(FatFile & dir, dir_t & entry, uint32_t & filePosition)
         if (page != 1) --page;
         gb.display.clear();
         gb.display.println();
-        if (!redrawLFNPage(dir, filePosition, page * 7 - 6, page * 7 + 1)) pages = page;
+        if (!redrawLFNPage(dir, filePosition, page * displayedEntries - displayedEntries + 1, page * displayedEntries + 1)) pages = page;
         LFNViewer_draw_pageNo(page, pages);
       }
       if (gb.buttons.pressed(BTN_RIGHT)) {
         if (page != pages) ++page;
         gb.display.clear();
         gb.display.println();
-        if (!redrawLFNPage(dir, filePosition, page * 7 - 6, page * 7 + 1)) pages = page;
+        if (!redrawLFNPage(dir, filePosition, page * displayedEntries - displayedEntries + 1, page * displayedEntries + 1)) pages = page;
         LFNViewer_draw_pageNo(page, pages);
       }
     }

@@ -40,14 +40,16 @@ void file_actions_loop(FatFile & dir, dir_t & entry, uint32_t & filePosition)
       realOption = map_selectedOption_realOption(available_file_actions, option);
 
       targetY = (gb.display.fontHeight + 4) - gb.display.fontHeight * option; //center the menu on the active item
+#ifdef DISPLAYDIRECT
+      currentY = targetY; // no animations when using direct display mode
+#else
       currentY = (currentY + targetY) / 2; // slowly approach targetY by taking average
+#endif
       //explorer_menu_redraw(currentY, option);
 
       gb.display.clear();
       gb.display.cursorX = 0;
       gb.display.cursorY = currentY;
-      gb.display.fontSize = 1;
-      gb.display.textWrap = false;
       for (uint8_t i = 0; i < file_actions_count; i++) {
         if (!(available_file_actions & (1 << i))) continue;
         if (gb.display.cursorY < -gb.display.fontHeight) {
@@ -55,7 +57,7 @@ void file_actions_loop(FatFile & dir, dir_t & entry, uint32_t & filePosition)
           continue;
         }
         if (i == realOption) {
-          gb.display.cursorX = 3;
+          gb.display.cursorX = gb.display.fontWidth;
           gb.display.cursorY = currentY + option * gb.display.fontHeight;
         }
         switch (i)

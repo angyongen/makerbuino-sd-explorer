@@ -1,6 +1,11 @@
 typedef int8_t displayedFiles_t; // file # on screen
 
-const displayedFiles_t displayedFiles = 7;
+
+#ifdef DISPLAYDIRECT
+const displayedFiles_t displayedFiles = 6;
+#else
+const displayedFiles_t displayedFiles = 8;
+#endif
 
 bool explorer_option_showBlankEntries = false;
 
@@ -9,9 +14,9 @@ inline bool explorer_redraw(FatFile & dir, uint32_t & startPosition)
   gb.display.clear();
   dir_t entry;
   dir.seekSet(startPosition);
-  gb.display.print(F("position: "));
-  gb.display.println(startPosition / 32);
-  //Serial.println();
+  //gb.display.print(F("position: "));
+  //gb.display.println(startPosition / 32);
+  //Serial.println(FreeStack());
   displayedFiles_t f = 0;
   while (f < displayedFiles)
   {
@@ -101,13 +106,13 @@ inline void explorer_gotoNextFile(FatFile & dir, uint32_t & startPosition)
     }
   */
 }
-uint8_t explorer_loop()
+uint8_t explorer_loop(SdFat & sd)
 {
   FatFile dir;
   uint32_t startPosition; // position in dir file of first displayed file
   uint16_t file_index;
   bool endNotReached = false;
-  if (dir.open("/")) {
+  if (dir.openRoot(&sd)) {
     displayedFiles_t fileNo = 0;
     //dir.rewind();
     startPosition = 0;
@@ -125,8 +130,8 @@ uint8_t explorer_loop()
             dir.seekSet(startPosition);
             file_actions_loop(dir, entry, startPosition);
           } else {
-            dir.open("/");
-            dir.rewind();
+            dir.openRoot(&sd);
+            //dir.rewind();
           }
           endNotReached = explorer_redraw(dir, startPosition);
         }
@@ -145,6 +150,7 @@ uint8_t explorer_loop()
         if (gb.buttons.pressed(BTN_B))
         {
           //enterDirectory();
+          //return;
         }
         if (gb.buttons.pressed(BTN_C))
         {
