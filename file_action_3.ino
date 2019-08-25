@@ -17,6 +17,11 @@ inline void file_action_3_printText(FatFile & dir, dir_t & entry, uint32_t & fil
 {
   gb.display.print(F("Get LFN"));
 }
+inline void printLFNEntry(ldir_t & ldir) {
+      for (uint8_t i = 0; i < 5; ++i) printLFNChar(ldir.name1[i]);
+      for (uint8_t i = 0; i < 6; ++i) printLFNChar(ldir.name2[i]);
+      for (uint8_t i = 0; i < 2; ++i) printLFNChar(ldir.name3[i]);
+}
 inline bool redrawLFNPage(FatFile & dir, uint32_t filePosition, uint8_t indexStart, uint8_t indexEnd)
 { //true for next page available, false for unavailable
   dir_t lfnEntry;
@@ -36,9 +41,7 @@ inline bool redrawLFNPage(FatFile & dir, uint32_t filePosition, uint8_t indexSta
       if (ldir.attr != DIR_ATT_LONG_NAME) return false;
       if (index < 10) gb.display.print(F(" "));
       gb.display.print(index); gb.display.print(F(" "));
-      for (uint8_t i = 0; i < 5; ++i) printLFNChar(ldir.name1[i]);
-      for (uint8_t i = 0; i < 6; ++i) printLFNChar(ldir.name2[i]);
-      for (uint8_t i = 0; i < 2; ++i) printLFNChar(ldir.name3[i]);
+      printLFNEntry(ldir);
       if (ldir.ord & LDIR_ORD_LAST_LONG_ENTRY) return false;
       gb.display.println();
     }

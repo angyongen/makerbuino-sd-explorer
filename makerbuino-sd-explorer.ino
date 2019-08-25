@@ -26,7 +26,7 @@ void setup() {
   screen.clear();
   screen.println(F("reading SD card..."));
   if (!sd.begin(SD_CS, SPI_HALF_SPEED)) {
-    //screen.println(F("SD card not found"));
+    screen.println(F("SD card not found"));
     debug.println(F("SD failed"));
     pause(gb);
   } else {

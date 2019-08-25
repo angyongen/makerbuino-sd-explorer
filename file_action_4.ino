@@ -6,11 +6,8 @@ inline void file_action_4_printText(FatFile & dir, dir_t & entry, uint32_t & fil
 {
   gb.display.print(F("Properties"));
 }
-inline void file_action_4(FatFile & dir, dir_t & entry, uint32_t & fileposition)
+inline void printAttributes(dir_t & entry)
 {
-  gb.display.clear();
-
-  gb.display.print(F("Attributes: "));
   //bitmask: 1=read only, 2=hidden, 4=system, 8=volumelabel, 16=dir, 32=archive
   uint8_t attr = entry.attributes;
   gb.display.print((attr & 0x80) ? F("x") : F("-")); attr <<= 1;
@@ -21,6 +18,14 @@ inline void file_action_4(FatFile & dir, dir_t & entry, uint32_t & fileposition)
   gb.display.print((attr & 0x80) ? F("S") : F("-")); attr <<= 1;
   gb.display.print((attr & 0x80) ? F("H") : F("-")); attr <<= 1;
   gb.display.print((attr & 0x80) ? F("R") : F("-")); attr <<= 1;
+}
+
+inline void file_properties_print_page_1(FatFile & dir, dir_t & entry, uint32_t & fileposition)
+{
+  gb.display.clear();
+
+  gb.display.print(F("Attributes: "));
+  printAttributes(entry);
 
   gb.display.println();
   gb.display.print(F("Size: "));
@@ -43,12 +48,32 @@ inline void file_action_4(FatFile & dir, dir_t & entry, uint32_t & fileposition)
     }
   }
   // todo: possibly add kiB, MiB, GiB?
+  gb.display.print(F("C:"));
+  dir.printFatDate(&gb.display, entry.creationDate);
+  gb.display.print(F(" "));
+  dir.printFatTime(&gb.display, entry.creationTime);
+  gb.display.println();
+  gb.display.print(F("W:"));
+  dir.printFatDate(&gb.display, entry.lastWriteDate);
+  gb.display.print(F(" "));
+  dir.printFatTime(&gb.display, entry.lastWriteTime);
+  gb.display.println();
+  gb.display.print(F("A:"));
+  dir.printFatDate(&gb.display, entry.lastAccessDate);
+  gb.display.println();
+  gb.display.print(F("  Page 1 of 2 \20"));
+}
 
-  gb.display.print(F("("));
+inline void file_properties_print_page_2(FatFile & dir, dir_t & entry, uint32_t & fileposition)
+{
+
+  gb.display.print(F("Size: "));
   gb.display.print(entry.fileSize); // uint32_t 10 digits max
-  gb.display.println(F(" bytes)"));
-
-  //add date created, date modified(last write), last accessed date
+  gb.display.println(F(" B"));
+}
+inline void file_action_4(FatFile & dir, dir_t & entry, uint32_t & fileposition)
+{
+  file_properties_print_page_1(dir, entry, fileposition);
   while (true) {
     if (gb.update()) {
       if (gb.buttons.pressed(BTN_B)) return;
