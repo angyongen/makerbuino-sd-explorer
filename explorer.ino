@@ -2,18 +2,31 @@ typedef int8_t displayedFiles_t; // file # on screen
 
 
 #ifdef DISPLAYDIRECT
-const displayedFiles_t displayedFiles = 6;
+const displayedFiles_t displayedFiles = 5;
 #else
-const displayedFiles_t displayedFiles = 8;
+const displayedFiles_t displayedFiles = 7;
 #endif
 
 
+class explorer_options
+{
+  public:
+  uint8_t data;
+  
+  bool showBlankEntries() {return (data & 1);};
+  void showBlankEntries(bool val) {if (val) data = data | (1); else data = data & ~(1); };
+  
+  bool showLFNEntries() {return (data & 2);};
+  void showLFNEntries(bool val) {if (val) data = data | (2); else data = data & ~(2); };
+  
+  bool showDeletedEntries() {return (data & 4);};
+  void showDeletedEntries(bool val) {if (val) data = data | (4); else data = data & ~(4); };
+  
+  bool showVolumeNameEntry() {return (data & 8);};
+  void showVolumeNameEntry(bool val) {if (val) data = data | (8); else data = data & ~(8); };
+};
 
-bool explorer_option_showBlankEntries = false;
-bool explorer_option_showLFNEntries = false;
-bool explorer_option_showDeletedEntries = false;
-bool explorer_option_showVolumeNameEntry = false;
-
+explorer_options explorer_option;
 inline void explorer_printAttributes(dir_t & entry)
 {
   uint8_t attr = entry.attributes;
@@ -30,10 +43,11 @@ inline bool explorer_redraw(FatFile & dir, uint32_t & startPosition)
   gb.display.clear();
   dir_t entry;
   dir.seekSet(startPosition);
-  //gb.display.print(F("position: "));
-  //gb.display.println(startPosition / 32);
+  gb.display.print(F("position: "));
+  gb.display.println(startPosition / 32);
   //Serial.println(FreeStack());
   displayedFiles_t f = 0;
+  //Serial.println();
   while (f < displayedFiles)
   {
     if (readNextDirRaw(dir, entry))
@@ -43,20 +57,20 @@ inline bool explorer_redraw(FatFile & dir, uint32_t & startPosition)
           //Serial.print(0); Serial.println(entry.name[0], HEX);
           return (f > 1); // stop when f == 1
         case 1: //invalid or deleted
-          if (explorer_option_showBlankEntries) {
+          if (explorer_option.showBlankEntries()) {
             ++f;
-            if ((entry.attributes == DIR_ATT_LONG_NAME) && explorer_option_showLFNEntries) {
+            if ((entry.attributes == DIR_ATT_LONG_NAME) && explorer_option.showLFNEntries()) {
               printLFNEntry(reinterpret_cast<ldir_t &>(entry));
               gb.display.cursorX = gb.display.fontWidth * 14;
               gb.display.println(F(" [LFN]"));
-            } else if ((entry.name[0] == DIR_NAME_DELETED) && explorer_option_showDeletedEntries) {
+            } else if ((entry.name[0] == DIR_NAME_DELETED) && explorer_option.showDeletedEntries()) {
               gb.display.print(F(" "));
               for (uint8_t i = 1; i < 11; i++) gb.display.print((char)entry.name[i]);
               gb.display.cursorX = gb.display.fontWidth * 12;
               gb.display.print(F("[X] "));
               explorer_printAttributes(entry);
               gb.display.println();
-            } else if ((entry.attributes == DIR_ATT_VOLUME_ID) && explorer_option_showVolumeNameEntry) {
+            } else if ((entry.attributes == DIR_ATT_VOLUME_ID) && explorer_option.showVolumeNameEntry()) {
               for (uint8_t i = 0; i < 11; i++) gb.display.print((char)entry.name[i]);
               gb.display.cursorX = gb.display.fontWidth * 12;
               gb.display.println(F(" [LABEL]"));
@@ -97,7 +111,7 @@ inline void explorer_gotoPreviousFile(FatFile & dir, uint32_t & startPosition)
       case 0:
         return;
       case 1:
-        if (explorer_option_showBlankEntries) {
+        if (explorer_option.showBlankEntries()) {
           startPosition = newStartPosition;
           return;
         } else {
@@ -135,7 +149,7 @@ inline void explorer_gotoNextFile(FatFile & dir, uint32_t & startPosition)
     }
   */
 }
-uint8_t explorer_loop(SdFat & sd)
+uint8_t explorer_loop()
 {
   FatFile dir;
   uint32_t startPosition; // position in dir file of first displayed file
@@ -152,6 +166,9 @@ uint8_t explorer_loop(SdFat & sd)
         {
           dir_t entry;
           dir.seekSet(startPosition);
+          readNextDirRaw(dir, entry);
+            file_actions_loop(dir, entry, startPosition);
+          /*
           uint16_t n = readNextDir(dir, entry);
           if (n > 0) {
             --n;
@@ -159,9 +176,11 @@ uint8_t explorer_loop(SdFat & sd)
             dir.seekSet(startPosition);
             file_actions_loop(dir, entry, startPosition);
           } else {
+            dir.close();
             dir.openRoot(&sd);
             //dir.rewind();
           }
+          */
           endNotReached = explorer_redraw(dir, startPosition);
         }
         if (gb.buttons.repeat(BTN_UP, repeatTime))
@@ -183,10 +202,7 @@ uint8_t explorer_loop(SdFat & sd)
         }
         if (gb.buttons.pressed(BTN_C))
         {
-          explorer_option_showBlankEntries = !explorer_option_showBlankEntries;
-          explorer_option_showLFNEntries = explorer_option_showBlankEntries;
-          explorer_option_showDeletedEntries = explorer_option_showBlankEntries;
-          explorer_option_showVolumeNameEntry = explorer_option_showBlankEntries;
+          explorer_options_loop();
           endNotReached = explorer_redraw(dir, startPosition);
         }
       }

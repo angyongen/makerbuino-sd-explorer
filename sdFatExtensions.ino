@@ -12,7 +12,7 @@ inline uint8_t checkDirEntry(dir_t & dir) {
   if (DIR_IS_FILE_OR_SUBDIR(&dir)) return 2;     // normal file or subdirectory
   return 1; // invalid entry
 }
-
+/*
 inline int16_t readNextDir(FatFile &d, dir_t &dir) {
   //returns number of entries read to reach a valid entry, 0 if failed and negative number if end of file reached
   int16_t n = 0;
@@ -26,3 +26,4 @@ inline int16_t readNextDir(FatFile &d, dir_t &dir) {
     if (DIR_IS_FILE_OR_SUBDIR(&dir)) return n;     // normal file or subdirectory
   }
 }
+*/

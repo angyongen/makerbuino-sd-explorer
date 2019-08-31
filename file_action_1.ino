@@ -12,6 +12,11 @@ inline void file_action_1(FatFile & dir, dir_t & entry, uint32_t & fileposition)
   if (!dir.open(&dir, fileposition / 32, O_READ)) {
     Serial.println(F("open fail"));
   }
+  //Serial.println(dir.firstCluster());
+  if (dir.firstCluster() == 0) {
+    dir.close();
+    dir.openRoot(&sd);
+  }
   dir.seekSet(0);
   fileposition = dir.curPosition();
 }
