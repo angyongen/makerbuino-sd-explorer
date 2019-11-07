@@ -4,62 +4,54 @@
 #include "gbTools.h" //pause and waitForUpdate
 #include "FreeStack.h"
 Gamebuino gb;
-#define repeatTime 3
+#define repeatTime 5
 
 //SdFat
 #include <SdFat.h>///#include "Gamebuino-SD-Explorer.h"
 
-uint8_t sd_cur;
-
-bool sd1_initialised;
-int8_t SD1_CS = SD_CS; //10
-SdFat sd1;
-
-bool sd2_initialised;
-int8_t SD2_CS = -1;
-SdFat sd2;
-
-SdFat & sd = sd1;
-
-bool initialiseSD(uint8_t csPin, SPISettings spiSettings)
+enum  sd_manager_state : uint8_t { zero = 0, initialised, reading, failed};
+struct sd_manager
 {
-  gb.display.clear();
-  gb.display.print(F("reading SD card @ "));
-  gb.display.print(csPin);
-  gb.display.println(F("..."));
-  waitForUpdate(gb);
-  if (sd.begin(csPin, spiSettings)) {
-    Serial.println(F("SD ok"));
-    waitForUpdate(gb);
-    return true;
-  } else {
-    Serial.println(F("SD failed"));
-    gb.display.println(F("SD card not found"));
-    waitForUpdate(gb);
-    pause(gb);
-    return false;
+  SdFat sdReader;
+  int8_t csPin;
+  sd_manager_state state;
+  SPISettings spiSettings;
+};
+
+sd_manager sd0;
+sd_manager sd1;
+
+void print_sd_info(sd_manager & sd, bool selected) {
+  gb.display.cursorX = 0;
+  if (selected) gb.display.print(F("\20")); else gb.display.print(F(" "));
+  switch (sd.state) {
+    case sd_manager_state::zero:
+      gb.display.print(F("InitSD"));
+      break;
+    case sd_manager_state::initialised:
+      gb.display.print(F("OpenSD"));
+      break;
+    case sd_manager_state::reading:
+      gb.display.print(F("READ.."));
+      break;
+    case sd_manager_state::failed:
+      gb.display.print(F("FAILED"));
+      break;
   }
+  gb.display.print(F(":CS"));
+  gb.display.print(sd.csPin);
+  gb.display.print(F("="));
+  print_pinInfo(sd.csPin);
+  waitForUpdate(gb);
 }
 
-void redraw_mainmenu(uint8_t sd_cur)
+void printAll_sdInfo()
 {
   gb.display.clear();
-  if (sd_cur == 0) gb.display.print(F("\20"));
-  if (sd1_initialised) {
-    gb.display.print(F("Open"));
-  } else {
-    gb.display.print(F("Initialise"));
-  }
-  gb.display.print(F(" SD 1 @ "));
-  gb.display.println(SD1_CS);
-  if (sd_cur == 1) gb.display.print(F("\20"));
-  if (sd2_initialised) {
-    gb.display.print(F("Open"));
-  } else {
-    gb.display.print(F("Initialise"));
-  }
-  gb.display.print(F(" SD 2 @ "));
-  gb.display.println(SD2_CS);
+  print_sd_info(sd0, false);
+  gb.display.println();
+  print_sd_info(sd1, false);
+  gb.display.println();
 }
 
 void setup() {
@@ -69,46 +61,81 @@ void setup() {
   gb.display.persistence = true;
   gb.setFrameRate(25);
 
+  gb.display.textWrap = false;
+
   //gb.battery.thresholds[0] = 0; //disable battery monitoring
   //gb.display.fontSize = 1;
-  //gb.display.textWrap = false;
-
   //Serial.println(FreeStack());
-  redraw_mainmenu(sd_cur);
+  
+  sd0.csPin = SD_CS;
+  printAll_sdInfo();
 }
 
-void loop() {
-  if (gb.update())
+void initialiseSD(sd_manager & sd)
+{
+  Serial.println(F("Reading SD card"));
+  sd.state = sd_manager_state::reading;
+  print_sd_info(sd, true);
+  if (sd.sdReader.begin(sd.csPin, sd.spiSettings)) {
+    Serial.println(F("SD ok"));
+    waitForUpdate(gb);
+    sd.state = sd_manager_state::initialised;
+  } else {
+    Serial.println(F("SD failed"));
+    sd.state = sd_manager_state::failed;
+    print_sd_info(sd, true);
+    pause_ABC_UDLR(gb);
+    sd0.state = sd_manager_state::zero;
+    sd1.state = sd_manager_state::zero;
+  }
+}
+
+int8_t sd_loop(sd_manager & sd, uint8_t cur) {
+  gb.display.cursorY = cur;
+  print_sd_info(sd, true);
+  while (true)
   {
-    if (gb.buttons.pressed(BTN_A))
+    if (gb.update())
     {
-      if (sd_cur == 0)
-      {
-        sd = sd1;
-        if (sd1_initialised) {
-          explorer_loop();
-        } else {
-          if (SD2_CS > 0) {
-            pinMode(SD2_CS, OUTPUT);
-            digitalWrite(SD2_CS, HIGH);
-          }
-          sd1_initialised = initialiseSD(SD1_CS, SPI_HALF_SPEED);
+      if (gb.buttons.pressed(BTN_A)) {
+        if (sd.csPin >= 0) {
+          if (sd.state == sd_manager_state::initialised) explorer_loop(sd.sdReader); else initialiseSD(sd);
         }
-      } else if (sd_cur == 1) {
-        sd = sd2;
-        if (sd2_initialised) {
-          explorer_loop();
-        } else {
-          if (SD1_CS > 0) {
-            pinMode(SD1_CS, OUTPUT);
-            digitalWrite(SD1_CS, HIGH);
-          }
-          sd2_initialised = initialiseSD(SD2_CS, SPI_HALF_SPEED);
-        }
+        printAll_sdInfo();
+        gb.display.cursorY = cur;
+        print_sd_info(sd, true);
       }
-      redraw_mainmenu(sd_cur);
+      if (gb.buttons.repeat(BTN_LEFT, repeatTime)) {
+        if (!sd.state == sd_manager_state::initialised) if (sd.csPin > -1) --sd.csPin;
+        print_sd_info(sd, true);
+      }
+      if (gb.buttons.repeat(BTN_RIGHT, repeatTime)) {
+        if (!sd.state == sd_manager_state::initialised) if (sd.csPin < 19) ++sd.csPin;
+        print_sd_info(sd, true);
+      }
+      if (gb.buttons.repeat(BTN_UP, repeatTime)) {
+        print_sd_info(sd, false);
+        return -1;
+      }
+      if (gb.buttons.repeat(BTN_DOWN, repeatTime)) {
+        print_sd_info(sd, false);
+        return 1;
+      }
     }
   }
-  if (gb.buttons.repeat(BTN_UP, repeatTime)) if (sd_cur != 0) redraw_mainmenu(--sd_cur);
-  if (gb.buttons.repeat(BTN_DOWN, repeatTime)) if (sd_cur != 1) redraw_mainmenu(++sd_cur);
+}
+
+int8_t cur = 0;
+void loop() {
+  switch (cur)
+  {
+    case 0:
+      cur += sd_loop(sd0, 0);
+      break;
+    case 1:
+      cur += sd_loop(sd1, gb.display.fontHeight);
+      break;
+  }
+  if (cur < 0) cur = 1;
+  if (cur > 1) cur = 0;
 }

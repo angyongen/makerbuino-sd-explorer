@@ -11,7 +11,7 @@ uint8_t map_selectedOption_realOption(uint8_t available_file_actions, uint8_t op
   return file_actions_count;
 }
 
-void file_actions_loop(FatFile & dir, dir_t & entry, uint32_t & filePosition)
+void file_actions_loop(SdFat & sd, FatFile & dir, dir_t & entry, uint32_t & filePosition)
 {
   int8_t currentY = LCDHEIGHT / 2;
   int8_t targetY = 0;
@@ -43,7 +43,7 @@ void file_actions_loop(FatFile & dir, dir_t & entry, uint32_t & filePosition)
 #ifdef DISPLAYDIRECT
       currentY = targetY; // no animations when using direct display mode
 #else
-      currentY = (currentY + targetY) / 2; // slowly approach targetY by taking average
+      currentY = (currentY + targetY) / 2; // slowly approach targetY by taking average each frame
 #endif
       //explorer_menu_redraw(currentY, option);
 
@@ -90,16 +90,16 @@ void file_actions_loop(FatFile & dir, dir_t & entry, uint32_t & filePosition)
         switch (realOption)
         {
           case 0:
-            file_action_1(dir, entry, filePosition);
+            file_action_1(sd, dir, entry, filePosition);
             return;
           case 1:
-            file_action_2(dir, entry, filePosition);
+            file_action_2(sd, dir, entry, filePosition);
             break;
           case 2:
-            file_action_3(dir, entry, filePosition);
+            file_action_3(sd, dir, entry, filePosition);
             break;
           case 3:
-            file_action_4(dir, entry, filePosition);
+            file_action_4(sd, dir, entry, filePosition);
             break;
         }
       }

@@ -1,0 +1,9 @@
+MAKERBUINO SD EXPLORER SDFAT DEBUG MODE ANALYSIS
+
+DEBUG MODE 0
+Sketch uses 16288 bytes (50%) of program storage space. Maximum is 32256 bytes.
+Global variables use 1493 bytes (72%) of dynamic memory, leaving 555 bytes for local variables. Maximum is 2048 bytes.
+
+DEBUG MODE 1
+Sketch uses 20014 bytes (62%) of program storage space. Maximum is 32256 bytes.
+Global variables use 1493 bytes (72%) of dynamic memory, leaving 555 bytes for local variables. Maximum is 2048 bytes.

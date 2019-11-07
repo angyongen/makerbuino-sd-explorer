@@ -1,4 +1,4 @@
-void volume_properties_redraw()
+inline void volume_properties_redraw(SdFat & sd)
 {
   gb.display.clear();
   gb.display.print(F("FAT"));
@@ -14,16 +14,8 @@ void volume_properties_redraw()
   gb.display.println(sd.rootDirStart());
 }
 
-void volume_properties_loop()
+void volume_properties_loop(SdFat & sd)
 {
-  volume_properties_redraw();
-  while (true)
-  {
-    if (gb.update())
-    {
-      if (gb.buttons.pressed(BTN_A)) return;
-      if (gb.buttons.pressed(BTN_B)) return;
-      if (gb.buttons.pressed(BTN_C)) return;
-    }
-  }
+  volume_properties_redraw(sd);
+  pause(gb);
 }

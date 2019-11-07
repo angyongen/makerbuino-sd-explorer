@@ -7,7 +7,7 @@ inline void file_action_2_printText(FatFile & dir, dir_t & entry, uint32_t & fil
   gb.display.print(F("Flash "));
   gb.display.print((char*)entry.name);
 }
-inline void file_action_2(FatFile & dir, dir_t & entry, uint32_t & fileposition)
+inline void file_action_2(SdFat & sd, FatFile & dir, dir_t & entry, uint32_t & fileposition)
 {
   load_game_menu(dir, (char*)entry.name);
 }

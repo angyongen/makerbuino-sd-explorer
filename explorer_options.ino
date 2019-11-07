@@ -1,3 +1,4 @@
+const uint8_t explorer_options_curMax = 3;
 void explorer_options_redraw(uint8_t cursor)
 {
   gb.display.clear();
@@ -5,23 +6,17 @@ void explorer_options_redraw(uint8_t cursor)
   gb.display.print(F("Volume Properties"));
   gb.display.println();
   if (cursor == 1) gb.display.print(F("\20"));
-  if (explorer_option.showBlankEntries()) gb.display.print(F("Hide")); else gb.display.print(F("Show"));
-  gb.display.print(F(" Blank Entries"));
+  gb.display.print(F("Display Settings"));
   gb.display.println();
   if (cursor == 2) gb.display.print(F("\20"));
-  if (explorer_option.showLFNEntries()) gb.display.print(F("Hide")); else gb.display.print(F("Show"));
-  gb.display.print(F(" LFN"));
+  gb.display.print(F("Rewind to beginning"));
   gb.display.println();
   if (cursor == 3) gb.display.print(F("\20"));
-  if (explorer_option.showDeletedEntries()) gb.display.print(F("Hide")); else gb.display.print(F("Show"));
-  gb.display.print(F(" Deleted"));
+  gb.display.print(F("Exit"));
   gb.display.println();
-  if (cursor == 4) gb.display.print(F("\20"));
-  if (explorer_option.showVolumeNameEntry()) gb.display.print(F("Hide")); else gb.display.print(F("Show"));
-  gb.display.print(F(" VolumeName"));
 }
 
-void explorer_options_loop()
+bool explorer_options_loop(SdFat & sd, uint32_t & startPosition)
 {
   uint8_t cursor = 0;
   explorer_options_redraw(cursor);
@@ -29,39 +24,27 @@ void explorer_options_loop()
   {
     if (gb.update())
     {
-      if (gb.buttons.pressed(BTN_C)) return;
-      if (gb.buttons.pressed(BTN_B)) return;
+      if (gb.buttons.pressed(BTN_C)) return true;
+      if (gb.buttons.pressed(BTN_B)) return true;
       if (gb.buttons.pressed(BTN_A)) {
         switch (cursor)
         {
           case 0:
-            volume_properties_loop();
+            volume_properties_loop(sd);
             break;
           case 1:
-            explorer_option.showBlankEntries(!explorer_option.showBlankEntries());
-            if (!explorer_option.showBlankEntries()) {
-              explorer_option.showLFNEntries(false);
-              explorer_option.showDeletedEntries(false);
-              explorer_option.showVolumeNameEntry(false);
-            }
+            explorer_displaySettings_loop();
             break;
           case 2:
-            explorer_option.showLFNEntries(!explorer_option.showLFNEntries());
-            if (explorer_option.showLFNEntries()) explorer_option.showBlankEntries(true);
-            break;
+            startPosition = 0;
+            return true;
           case 3:
-            explorer_option.showDeletedEntries(!explorer_option.showDeletedEntries());
-            if (explorer_option.showDeletedEntries()) explorer_option.showBlankEntries(true);
-            break;
-          case 4:
-            explorer_option.showVolumeNameEntry(!explorer_option.showVolumeNameEntry());
-            if (explorer_option.showVolumeNameEntry()) explorer_option.showBlankEntries(true);
-            break;
+            return false;
         }
         explorer_options_redraw(cursor);
       };
-      if (gb.buttons.repeat(BTN_UP, repeatTime)) if (cursor != 0) explorer_options_redraw(--cursor);
-      if (gb.buttons.repeat(BTN_DOWN, repeatTime)) if (cursor != 4) explorer_options_redraw(++cursor);
+      if (gb.buttons.repeat(BTN_UP, repeatTime)) explorer_options_redraw((cursor == 0) ? cursor = explorer_options_curMax : --cursor);
+      if (gb.buttons.repeat(BTN_DOWN, repeatTime)) explorer_options_redraw((cursor == explorer_options_curMax) ? cursor = 0 : ++cursor);
     }
   }
 }

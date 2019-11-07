@@ -1,5 +1,6 @@
 typedef int8_t displayedFiles_t; // file # on screen
 
+#define repeatTime_explorer 3
 
 #ifdef DISPLAYDIRECT
 const displayedFiles_t displayedFiles = 5;
@@ -11,19 +12,39 @@ const displayedFiles_t displayedFiles = 7;
 class explorer_options
 {
   public:
-  uint8_t data;
-  
-  bool showBlankEntries() {return (data & 1);};
-  void showBlankEntries(bool val) {if (val) data = data | (1); else data = data & ~(1); };
-  
-  bool showLFNEntries() {return (data & 2);};
-  void showLFNEntries(bool val) {if (val) data = data | (2); else data = data & ~(2); };
-  
-  bool showDeletedEntries() {return (data & 4);};
-  void showDeletedEntries(bool val) {if (val) data = data | (4); else data = data & ~(4); };
-  
-  bool showVolumeNameEntry() {return (data & 8);};
-  void showVolumeNameEntry(bool val) {if (val) data = data | (8); else data = data & ~(8); };
+    uint8_t data;
+
+    bool showBlankEntries() {
+      return (data & 1);
+    };
+    void showBlankEntries(bool val) {
+      if (val) data = data | (1);
+      else data = data & ~(1);
+    };
+
+    bool showLFNEntries() {
+      return (data & 2);
+    };
+    void showLFNEntries(bool val) {
+      if (val) data = data | (2);
+      else data = data & ~(2);
+    };
+
+    bool showDeletedEntries() {
+      return (data & 4);
+    };
+    void showDeletedEntries(bool val) {
+      if (val) data = data | (4);
+      else data = data & ~(4);
+    };
+
+    bool showVolumeNameEntry() {
+      return (data & 8);
+    };
+    void showVolumeNameEntry(bool val) {
+      if (val) data = data | (8);
+      else data = data & ~(8);
+    };
 };
 
 explorer_options explorer_option;
@@ -149,7 +170,7 @@ inline void explorer_gotoNextFile(FatFile & dir, uint32_t & startPosition)
     }
   */
 }
-uint8_t explorer_loop()
+uint8_t explorer_loop(SdFat & sd)
 {
   FatFile dir;
   uint32_t startPosition; // position in dir file of first displayed file
@@ -167,32 +188,30 @@ uint8_t explorer_loop()
           dir_t entry;
           dir.seekSet(startPosition);
           readNextDirRaw(dir, entry);
-            file_actions_loop(dir, entry, startPosition);
+          file_actions_loop(sd, dir, entry, startPosition);
           /*
-          uint16_t n = readNextDir(dir, entry);
-          if (n > 0) {
+            uint16_t n = readNextDir(dir, entry);
+            if (n > 0) {
             --n;
             startPosition += 32 * n;
             dir.seekSet(startPosition);
             file_actions_loop(dir, entry, startPosition);
-          } else {
+            } else {
             dir.close();
             dir.openRoot(&sd);
             //dir.rewind();
-          }
+            }
           */
           endNotReached = explorer_redraw(dir, startPosition);
         }
-        if (gb.buttons.repeat(BTN_UP, repeatTime))
+        if (gb.buttons.repeat(BTN_UP, repeatTime_explorer))
         {
           explorer_gotoPreviousFile(dir, startPosition);
           endNotReached = explorer_redraw(dir, startPosition);
         }
-        if (gb.buttons.repeat(BTN_DOWN, repeatTime))
+        if (gb.buttons.repeat(BTN_DOWN, repeatTime_explorer))
         {
-          if (endNotReached) {
-            explorer_gotoNextFile(dir, startPosition);
-          }
+          if (endNotReached) explorer_gotoNextFile(dir, startPosition);
           endNotReached = explorer_redraw(dir, startPosition);
         }
         if (gb.buttons.pressed(BTN_B))
@@ -202,7 +221,7 @@ uint8_t explorer_loop()
         }
         if (gb.buttons.pressed(BTN_C))
         {
-          explorer_options_loop();
+          if (!explorer_options_loop(sd, startPosition)) return;
           endNotReached = explorer_redraw(dir, startPosition);
         }
       }

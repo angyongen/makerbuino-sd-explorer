@@ -90,7 +90,7 @@ inline void file_properties_print_page(uint8_t page, FatFile & dir, dir_t & entr
     file_properties_print_page_2(dir, entry, fileposition);
   }
 }
-inline void file_action_4(FatFile & dir, dir_t & entry, uint32_t & fileposition)
+inline void file_action_4(SdFat & sd, FatFile & dir, dir_t & entry, uint32_t & fileposition)
 {
   uint8_t page = 1;
   file_properties_print_page_1(dir, entry, fileposition);

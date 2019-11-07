@@ -67,7 +67,7 @@ inline void LFNViewer_draw_pageNo(uint8_t & page, uint8_t & pages)
   }
   if (page < pages) gb.display.print(F(" \20"));
 }
-inline void file_action_3(FatFile & dir, dir_t & entry, uint32_t & filePosition)
+inline void file_action_3(SdFat & sd, FatFile & dir, dir_t & entry, uint32_t & filePosition)
 {
   uint8_t page = 1;
   uint8_t pages = 0;
